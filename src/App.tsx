@@ -12,6 +12,8 @@ function App() {
   const [answerImage, setAnswerImage] = useState<UploadedImage | null>(null);
   const [result, setResult] = useState<ProcessResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(0);
+  const [processingStage, setProcessingStage] = useState('');
 
   // Initialize theme based on system preference
   useEffect(() => {
@@ -32,11 +34,23 @@ function App() {
     if (!questionImage || !answerImage) return;
     
     setIsProcessing(true);
+    setProcessingProgress(0);
+    setProcessingStage('');
+    setResult(null);
+    
     try {
-      const processResult = await processImages(questionImage.file, answerImage.file);
+      const processResult = await processImages(
+        questionImage.file, 
+        answerImage.file,
+        (progress, stage) => {
+          setProcessingProgress(progress);
+          setProcessingStage(stage);
+        }
+      );
       setResult(processResult);
     } catch (error) {
       console.error('Processing failed:', error);
+      alert('Processing failed. Please ensure the images are clear and contain readable text.');
     } finally {
       setIsProcessing(false);
     }
@@ -95,28 +109,44 @@ function App() {
 
           {/* Process Button */}
           <div className="flex justify-center mt-8">
-            <button
-              onClick={handleProcess}
-              disabled={!canProcess}
-              className={`
-                flex items-center space-x-2 px-8 py-3 rounded-lg font-medium
-                transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2
-                ${canProcess
-                  ? 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }
-                ${darkMode ? 'focus:ring-offset-gray-800' : 'focus:ring-offset-white'}
-              `}
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  <span>Processing...</span>
-                </>
-              ) : (
-                <span>Process Images</span>
+            <div className="w-full max-w-md">
+              <button
+                onClick={handleProcess}
+                disabled={!canProcess}
+                className={`
+                  w-full flex items-center justify-center space-x-2 px-8 py-3 rounded-lg font-medium
+                  transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2
+                  ${canProcess
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }
+                  ${darkMode ? 'focus:ring-offset-gray-800' : 'focus:ring-offset-white'}
+                `}
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>{processingStage || 'Processing...'}</span>
+                  </>
+                ) : (
+                  <span>Process Images</span>
+                )}
+              </button>
+              
+              {isProcessing && (
+                <div className="mt-4">
+                  <div className={`w-full bg-gray-200 rounded-full h-2 ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
+                      style={{ width: `${processingProgress}%` }}
+                    ></div>
+                  </div>
+                  <p className={`text-sm mt-2 text-center ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                    {processingProgress}% - {processingStage}
+                  </p>
+                </div>
               )}
-            </button>
+            </div>
           </div>
         </div>
 
